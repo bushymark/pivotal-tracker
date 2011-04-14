@@ -4,7 +4,7 @@ module PivotalTracker
     class NoToken < StandardError; end
 
     class << self
-      attr_writer :use_ssl, :token
+      attr_writer :use_ssl, :token, :uri
 
       def use_ssl
         @use_ssl || false
@@ -13,9 +13,9 @@ module PivotalTracker
       def token(username, password, method='post')
         return @token if @token
         response = if method == 'post'
-          RestClient.post 'https://www.pivotaltracker.com/services/v3/tokens/active', :username => username, :password => password
+          RestClient.post "https://#{uri}/services/v3/tokens/active", :username => username, :password => password
         else
-          RestClient.get "https://#{username}:#{password}@www.pivotaltracker.com/services/v3/tokens/active"
+          RestClient.get "https://#{username}:#{password}@#{uri}/services/v3/tokens/active"
         end
         @token= Nokogiri::XML(response.body).search('guid').inner_html
       end
@@ -26,9 +26,13 @@ module PivotalTracker
 
         @connections ||= {}
 
-        @connections[@token] ||= RestClient::Resource.new("#{protocol}://www.pivotaltracker.com/services/v3", :headers => {'X-TrackerToken' => @token, 'Content-Type' => 'application/xml'})
+        @connections[@token] ||= RestClient::Resource.new("#{protocol}://#{uri}/services/v3", :headers => {'X-TrackerToken' => @token, 'Content-Type' => 'application/xml'})
       end
-
+      
+      def uri
+        @uri ||= "www.pivotaltracker.com"
+      end
+      
       protected
 
         def protocol
